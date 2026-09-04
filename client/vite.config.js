@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/Token/',
   plugins: [react()],
+
   server: {
     port: 3000,
     proxy: {
@@ -12,5 +13,11 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+
+  preview: {
+    host: '0.0.0.0',
+    port: 10000,
+    allowedHosts: true
   }
 })
