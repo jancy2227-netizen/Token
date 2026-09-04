@@ -9,36 +9,28 @@ const connectDB = async () => {
       return;
     }
 
-    let mongoUri = process.env.MONGODB_URI;
+    const mongoUri = process.env.MONGODB_URI;
 
-    // If explicit URI provided, try connecting
-    if (mongoUri) {
-      try {
-        console.log(`Connecting to configured MongoDB at ${mongoUri.split('@').pop()}...`);
-        await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 3000 });
-        console.log(' MongoDB connected successfully via MONGODB_URI.');
-        return;
-      } catch (err) {
-        console.warn(`! Failed to connect to configured MongoDB (${err.message}). Initializing embedded database fallback...`);
-      }
+    if (!mongoUri) {
+      console.error('MONGODB_URI environment variable is not set.');
+      process.exit(1);
     }
 
-    // Portable Embedded MongoDB Fallback (MongoMemoryServer)
-    console.log('Starting portable embedded MongoDB instance (this may download a binary on first run)...');
-    const { MongoMemoryServer } = require('mongodb-memory-server');
-    mongod = await MongoMemoryServer.create({
-      instance: {
-        dbName: 'hostel_mess'
-      },
-      spawn: {
-        timeout: 60000
-      }
-    });
-    mongoUri = mongod.getUri();
-    await mongoose.connect(mongoUri);
-    console.log(` Embedded MongoDB instance running and connected at: ${mongoUri}`);
+    try {
+      console.log('Connecting to configured MongoDB...');
+
+      await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 10000
+      });
+
+      console.log('MongoDB connected successfully via MONGODB_URI.');
+      return;
+    } catch (err) {
+      console.error('Failed to connect to MongoDB:', err.message);
+      process.exit(1);
+    }
   } catch (error) {
-    console.error('Fatal MongoDB Connection Error:', error.message);
+    console.error('MongoDB Connection Error:', error.message);
     process.exit(1);
   }
 };
@@ -46,9 +38,13 @@ const connectDB = async () => {
 const disconnectDB = async () => {
   try {
     await mongoose.disconnect();
+
     if (mongod) {
       await mongod.stop();
+      mongod = null;
     }
+
+    console.log('MongoDB disconnected.');
   } catch (error) {
     console.error('Error disconnecting database:', error.message);
   }
